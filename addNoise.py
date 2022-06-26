@@ -8,22 +8,23 @@ import numpy as np
 from pycocotools.coco import COCO
 from skimage.io.tests.test_mpl_imshow import plt
 
-
 # 定义需要提取的类别
-# labels = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
-#           'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
-#           'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
-#           'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
-#           'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
-#           'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
-#           'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
-#           'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
-#           'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
-#           'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
-#           'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
-#           'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven',
-#           'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
-#           'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+labels = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+          'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
+          'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog',
+          'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+          'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+          'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
+          'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+          'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+          'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot',
+          'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+          'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop',
+          'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven',
+          'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
+          'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+
+
 # 改变图片大小
 def adjustImage(path, x1, x2, y1, y2, rows, cols):
     object = cv2.imread(path, cv2.IMREAD_UNCHANGED)
@@ -112,7 +113,7 @@ def addObject(img, path, x1, x2, y1, y2, rows, cols):
     top_distance = ceil(y1)
     # 下方距离
     bottom_distance = rows - ceil(y2)
-
+    # 调整图片大小
     region = adjustImage(path, x1, x2, y1, y2, rows, cols)
     # plt.imshow(region)
     # plt.show()
@@ -133,28 +134,29 @@ def addObject(img, path, x1, x2, y1, y2, rows, cols):
         for c in range(0, 3):
             img_new[0:y_t, x_r:cols, c] = (
                     (alpha_jpg * img_new[0:y_t, x_r:cols, c]) + (alpha_png * region[yy1:yy2, xx1:xx2, c]))
-        return img_new
+
+        # 返回插入后的图片和插入实例左上角坐标及实例的宽和高
+        return img_new, x_r, 0, cols - x_r, y_t
 
     # 左
     elif left_distance >= (xx2 - xx1):
         for c in range(0, 3):
             img_new[0:y_t, 0:x_l, c] = (
                     (alpha_jpg * img_new[0:y_t, 0:x_l, c]) + (alpha_png * region[yy1:yy2, xx1:xx2, c]))
-        return img_new
+        return img_new, 0, 0, x_l, y_t
 
     # 上
     elif top_distance >= (yy2 - yy1):
         for c in range(0, 3):
             img_new[0:y_t, 0:x_l, c] = (
                     (alpha_jpg * img_new[0:y_t, 0:x_l, c]) + (alpha_png * region[yy1:yy2, xx1:xx2, c]))
-        return img_new
-
+        return img_new, 0, 0, x_l, y_t
     # 下角
     elif bottom_distance >= (yy2 - yy1):
         for c in range(0, 3):
             img_new[y_b:rows, 0:x_l, c] = (
                     (alpha_jpg * img_new[y_b:rows, 0:x_l, c]) + (alpha_png * region[yy1:yy2, xx1:xx2, c]))
-        return img_new
+        return img_new, 0, y_b, x_l, rows - y_b
 
 
 # 改变亮度
@@ -216,6 +218,22 @@ def addNoiseToBack(rows, cols, x1, x2, y1, y2, image, name):
     cv2.imwrite(os.path.join("E:/background", name), image)
 
 
+# 将x,y,width,height转换为txt
+def convert(size, box):
+    dw = 1. / (size[0])
+    dh = 1. / (size[1])
+    x = box[0] + box[2] / 2.0
+    y = box[1] + box[3] / 2.0
+    w = box[2]
+    h = box[3]
+    # round函数确定(xmin, ymin, xmax, ymax)的小数位数
+    x = round(x * dw, 6)
+    w = round(w * dw, 6)
+    y = round(y * dh, 6)
+    h = round(h * dh, 6)
+    return (x, y, w, h)
+
+
 if __name__ == "__main__":
     # 定义Coco数据集根目录
     coco_root = r"F:/newdata/"
@@ -238,23 +256,20 @@ if __name__ == "__main__":
     namelist = os.listdir(coco_path['image_path'])
     i = 0
     for name in tqdm(namelist):
-
-        if i == 1654:
-            print(name)
-
-        i = i + 1
         imageNubmer = name[0:12]
         imgid = int(name[6:12])
-
         # annotation的id
         annsid = ins_coco.getAnnIds(imgid)
         # annotation信息
         outline = ins_coco.loadAnns(annsid)
         # 类别id
         catId = outline[0]["category_id"]
+        # 图片检测类别
+        labels_class = labels.index(ins_coco.cats[catId]['name'])
         image = cv2.imread(os.path.join(coco_root, name))
-        img_noise = image
 
+        img_noise = image
+        i
         # boundingbox位置
         x, y, w, h = outline[0]["bbox"]
         x1, y1, x2, y2 = x, y, int(x + w), int(y + h)
@@ -266,9 +281,16 @@ if __name__ == "__main__":
         # m = ins_coco.annToMask(outline[0])
         # 实例路径
         path = os.path.join(objectpath, str(catId) + "/", str(imageNubmer) + ".png")
-        c = addObject(image, path, x1, x2, y1, y2, rows, cols)
-
-        cv2.imwrite(os.path.join("E:/data/repeat/", name), c)
+        c, left_x, top_y, width, height = addObject(image, path, x1, x2, y1, y2, rows, cols)
+        f = open(os.path.join("E:/data/repeat/txt/", imageNubmer + ".txt"), "w")
+        x, y, w, h = convert((cols, rows), outline[0]["bbox"])
+        f.write("%s %s %s %s %s\n" % (labels_class, x, y, w, h))
+        box = [left_x, top_y, width, height]
+        left_x, top_y, width, height = convert((cols, rows), box)
+        f.write("%s %s %s %s %s\n" % (labels_class, left_x, top_y, width, height))
+        f.close()
+        # 保存插入的图片c
+        # cv2.imwrite(os.path.join("E:/data/repeat/", name), c)
         # cv2.imwrite(os.path.join("E:\data\synPhoto", name), c)
         # mask = np.array(m)
         # # 复制并扩充维度与原图片相等, 用于后续计算

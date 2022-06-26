@@ -16,6 +16,7 @@ parser.add_argument('--save_path', default='F:/newdata/Lable/train2017', type=st
                     help="specify where to save the output dir of labels")
 arg = parser.parse_args()
 
+
 def convert(size, box):
     dw = 1. / (size[0])
     dh = 1. / (size[1])
@@ -61,6 +62,6 @@ if __name__ == '__main__':
                 box = convert((img_width, img_height), ann["bbox"])
                 f_txt.write("%s %s %s %s %s\n" % (id_map[ann["category_id"]], box[0], box[1], box[2], box[3]))
         f_txt.close()
-        # 将图片的相对路径写入train2017或val2017的路径
+        # 将图片的相对路径写入train2017或 val2017的路径
         #list_file.write('E:/data/COCO2017/train2017/%s.jpg\n' % (head))
    # list_file.close()
